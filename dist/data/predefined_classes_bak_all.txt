@@ -1,0 +1,14 @@
+car_small
+car_truck
+car_bus
+car_moto
+car_danger
+ren
+dongwu
+fanguangyi
+fanguangzhu
+fanguangzhui
+yanwu
+huo
+sanjiaopai
+shigongpai

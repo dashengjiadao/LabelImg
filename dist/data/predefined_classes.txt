@@ -1,0 +1,14 @@
+car_small
+car_truck
+car_bus
+car_moto
+car_danger
+fix_worker
+fix_builder_zhu
+fix_builder_zhui
+fix_builder_pai
+people_people
+animal_animal
+event_smoke
+event_fire
+event_event
