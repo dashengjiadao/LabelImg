@@ -12,3 +12,5 @@ animal_animal
 event_smoke
 event_fire
 event_event
+event_yisa
+event_shigongche

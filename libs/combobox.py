@@ -18,6 +18,7 @@ class ComboBox(QWidget):
 
         layout = QHBoxLayout()
         self.cb = QComboBox()
+      
         self.items = items
         self.cb.addItems(self.items)
 

@@ -13,7 +13,7 @@ BB = QDialogButtonBox
 
 class LabelDialog(QDialog):
 
-    def __init__(self, text="Enter object label", parent=None, listItem=None):
+    def __init__(self, text="", parent=None, listItem=None):
         super(LabelDialog, self).__init__(parent)
 
         self.edit = QLineEdit()
@@ -42,9 +42,14 @@ class LabelDialog(QDialog):
                 self.listWidget.addItem(item)
             self.listWidget.itemClicked.connect(self.listItemClick)
             self.listWidget.itemDoubleClicked.connect(self.listItemDoubleClick)
+            
             layout.addWidget(self.listWidget)
-
+			
+        self.setWindowFlags(Qt.Window |Qt.WindowTitleHint);
+        self.resize(200,500)
         self.setLayout(layout)
+
+		
 
     def validate(self):
         try:
@@ -62,21 +67,31 @@ class LabelDialog(QDialog):
             # PyQt5: AttributeError: 'str' object has no attribute 'trimmed'
             self.edit.setText(self.edit.text())
 
-    def popUp(self, text='', move=True):
+    def popUp(self, text='', move=True,shape=None):
         self.edit.setText(text)
         self.edit.setSelection(0, len(text))
         self.edit.setFocus(Qt.PopupFocusReason)
+
         if move:
-            cursor_pos = QCursor.pos()
+            movePos=QPoint(0,0)
+            if shape is not None:
+                movePos = QCursor.pos()
+            else:
+                movePos = QCursor.pos()
+				
+
             parent_bottomRight = self.parentWidget().geometry()
+
             max_x = parent_bottomRight.x() + parent_bottomRight.width() - self.sizeHint().width()
             max_y = parent_bottomRight.y() + parent_bottomRight.height() - self.sizeHint().height()
+			
             max_global = self.parentWidget().mapToGlobal(QPoint(max_x, max_y))
-            if cursor_pos.x() > max_global.x():
-                cursor_pos.setX(max_global.x())
-            if cursor_pos.y() > max_global.y():
-                cursor_pos.setY(max_global.y())
-            self.move(cursor_pos)
+            if movePos.x() > max_global.x():
+                movePos.setX(max_global.x())
+            if movePos.y() > max_global.y():
+                movePos.setY(max_global.y()-200)
+				
+            self.move(movePos)
         return self.edit.text() if self.exec_() else None
 
     def listItemClick(self, tQListWidgetItem):

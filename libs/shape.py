@@ -34,7 +34,7 @@ class Shape(object):
     vertex_fill_color = DEFAULT_VERTEX_FILL_COLOR
     hvertex_fill_color = DEFAULT_HVERTEX_FILL_COLOR
     point_type = P_ROUND
-    point_size = 5
+    point_size = 8
     scale = 1.0
     labelFontSize = 4
 
@@ -49,8 +49,8 @@ class Shape(object):
         self._highlightIndex = None
         self._highlightMode = self.NEAR_VERTEX
         self._highlightSettings = {
-            self.NEAR_VERTEX: (3, self.P_ROUND),
-            self.MOVE_VERTEX: (1.3, self.P_SQUARE),
+            self.NEAR_VERTEX: (4, self.P_ROUND),
+            self.MOVE_VERTEX: (1.5, self.P_SQUARE),
         }
 
         self._closed = False
@@ -90,7 +90,7 @@ class Shape(object):
                 color = self.select_line_color if self.selected else self.line_color
                 pen = QPen(color)
                 # Try using integer sizes for smoother drawing(?)
-                pen.setWidth(1)#max(1, int(round(2.0 / self.scale))))
+                pen.setWidth(1)#
                 
                 painter.setPen(pen)
 
@@ -106,6 +106,7 @@ class Shape(object):
                 for i, p in enumerate(self.points):
                     line_path.lineTo(p)
                     self.drawVertex(vrtx_path, i)
+
                 if self.isClosed():
                     line_path.lineTo(self.points[0])
 
@@ -114,13 +115,14 @@ class Shape(object):
                 painter.fillPath(vrtx_path, self.vertex_fill_color)
                
                 # Draw text at the top-left
-                if self.paintLabel:
+                if self.paintLabel or self.fill:
                     min_x = sys.maxsize
                     min_y = sys.maxsize
                     min_y_label = int(1.25 * self.labelFontSize)
                     for point in self.points:
                         min_x = min(min_x, point.x())
                         min_y = min(min_y, point.y())
+						
                     if min_x != sys.maxsize and min_y != sys.maxsize:
                         font = QFont()
                         font.setPointSize(self.labelFontSize)
@@ -137,6 +139,7 @@ class Shape(object):
                 if self.fill:
                     color = self.select_fill_color if self.selected else self.fill_color
                     painter.fillPath(line_path, color)
+					
         except BaseException as e:
             self.errorMessage(u'发生错误',
                                   (u"<p><b>%s</b></p>")

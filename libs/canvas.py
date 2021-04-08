@@ -120,10 +120,12 @@ class Canvas(QWidget):
         # Polygon drawing.
         if self.drawing():
             self.overrideCursor(CURSOR_DRAW)
+           
             if self.current:
                 # Display annotation width and height while drawing
                 currentWidth = abs(self.current[0].x() - pos.x())
                 currentHeight = abs(self.current[0].y() - pos.y())
+   
                 self.parent().window().labelCoordinates.setText(
                         'Width: %d, Height: %d / X: %d; Y: %d' % (currentWidth, currentHeight, pos.x(), pos.y()))
 
@@ -152,6 +154,7 @@ class Canvas(QWidget):
                     directionX = -1 if pos.x() - minX < 0 else 1
                     directionY = -1 if pos.y() - minY < 0 else 1
                     self.line[1] = QPointF(minX + directionX * min_size, minY + directionY * min_size)
+                    self.line[1] = pos
                 else:
                     self.line[1] = pos
 
@@ -159,8 +162,10 @@ class Canvas(QWidget):
                 self.prevPoint = QPointF()
                 self.current.highlightClear()
             else:
+                a=1
                 self.prevPoint = pos
             self.repaint()
+			
             return
 
         # Polygon copy moving.
@@ -189,8 +194,11 @@ class Canvas(QWidget):
                 #pan
                 delta_x = pos.x() - self.pan_initial_pos.x()
                 delta_y = pos.y() - self.pan_initial_pos.y()
-                self.scrollRequest.emit(delta_x, Qt.Horizontal)
-                self.scrollRequest.emit(delta_y, Qt.Vertical)
+                
+                #提高5倍的拖动速度
+                moveSpeed=10
+                self.scrollRequest.emit(delta_x*moveSpeed, Qt.Horizontal)
+                self.scrollRequest.emit(delta_y*moveSpeed, Qt.Vertical)
                 self.update()
             return
       
@@ -249,6 +257,7 @@ class Canvas(QWidget):
             self.selectShapePoint(pos)
             self.prevPoint = pos
         self.update()
+		
 
     def mouseReleaseEvent(self, ev):
         if ev.button() == Qt.RightButton:
@@ -264,13 +273,17 @@ class Canvas(QWidget):
                 self.overrideCursor(CURSOR_POINT)
             else:
                 self.overrideCursor(CURSOR_GRAB)
+           
+     
         elif ev.button() == Qt.LeftButton:
+       
             pos = self.transformPos(ev.pos())
             if self.drawing():
                 self.handleDrawing(pos)
             else:
                 #pan
                 QApplication.restoreOverrideCursor()
+    
 
     def endMove(self, copy=False):
         assert self.selectedShape and self.selectedShapeCopy
@@ -295,17 +308,20 @@ class Canvas(QWidget):
             self.repaint()
 
     def handleDrawing(self, pos):
+    
         if self.current and self.current.reachMaxPoints() is False:
-            initPos = self.current[0]
+            initPos = self.line[0]
             minX = initPos.x()
             minY = initPos.y()
             targetPos = self.line[1]
             maxX = targetPos.x()
             maxY = targetPos.y()
+		
             self.current.addPoint(QPointF(maxX, minY))
             self.current.addPoint(targetPos)
             self.current.addPoint(QPointF(minX, maxY))
             self.finalise()
+       
         elif not self.outOfPixmap(pos):
             self.current = Shape()
             self.current.addPoint(pos)
@@ -313,6 +329,7 @@ class Canvas(QWidget):
             self.setHiding()
             self.drawingPolygon.emit(True)
             self.update()
+       
 
     def setHiding(self, enable=True):
         self._hideBackround = self.hideBackround if enable else False
@@ -486,25 +503,47 @@ class Canvas(QWidget):
             if (shape.selected or not self._hideBackround) and self.isVisible(shape):
                 shape.fill = shape.selected or shape == self.hShape
                 shape.paint(p)
+				
         if self.current:
             self.current.paint(p)
             self.line.paint(p)
+			
         if self.selectedShapeCopy:
             self.selectedShapeCopy.paint(p)
-
+    
         # Paint rect
         if self.current is not None and len(self.line) == 2:
             leftTop = self.line[0]
             rightBottom = self.line[1]
             rectWidth = rightBottom.x() - leftTop.x()
             rectHeight = rightBottom.y() - leftTop.y()
+            
             p.setPen(self.drawingRectColor)
-            brush = QBrush(Qt.BDiagPattern)
+            brush = QBrush(Qt.Dense7Pattern)
+            brush.setColor(QColor(0,255,0,60))
             p.setBrush(brush)
-            p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
-
+            # rect=(leftTop.x(),leftTop.y(),rightBottom.x(),rightBottom.y())
+            # print('rect',rect)
+			#ds
+            points=[]
+   
+            points.append(leftTop)
+            points.append(QPointF(rightBottom.x(), leftTop.y()))
+            points.append(rightBottom)
+            points.append(QPointF(leftTop.x(), rightBottom.y()))
+            points.append(leftTop)
+            
+            line_path = QPainterPath()
+            line_path.moveTo(points[0])
+            
+            for i, pc in enumerate(points):
+                line_path.lineTo(pc)
+			
+            p.drawPath(line_path)
+            #p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
+        #ds
         if self.drawing() and not self.prevPoint.isNull() and not self.outOfPixmap(self.prevPoint):
-            p.setPen(QColor(0, 0, 0))
+            p.setPen(self.drawingLineColor)
             p.drawLine(self.prevPoint.x(), 0, self.prevPoint.x(), self.pixmap.height())
             p.drawLine(0, self.prevPoint.y(), self.pixmap.width(), self.prevPoint.y())
 
@@ -610,6 +649,7 @@ class Canvas(QWidget):
 
     def moveOnePixel(self, direction):
         # print(self.selectedShape.points)
+
         if direction == 'Left' and not self.moveOutOfBound(QPointF(-1.0, 0)):
             # print("move Left one pixel")
             self.selectedShape.points[0] += QPointF(-1.0, 0)

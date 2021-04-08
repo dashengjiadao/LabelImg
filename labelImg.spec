@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['labelImg.py'],
-             pathex=['D:\\BaiduNetdiskDownload\\labelImg-master\\LabelImg'],
+             pathex=['E:\\Github\\LabelImg2'],
              binaries=[],
              datas=[],
              hiddenimports=[],

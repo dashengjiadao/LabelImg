@@ -1,5 +1,0 @@
-car_small
-car_truck
-car_bus
-car_moto
-car_danger

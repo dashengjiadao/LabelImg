@@ -49,7 +49,7 @@ from libs.create_ml_io import JSON_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
-__appname__ = 'labelImg'
+__appname__ = 'labelImg v2021.3'
 
 
 class WindowMixin(object):
@@ -274,7 +274,7 @@ class MainWindow(QMainWindow, WindowMixin):
                         
                     
         copy = action(getStr('dupBox'), self.copySelectedShape,
-                      'Ctrl+D', 'copy', getStr('dupBoxDetail'),
+                      'Ctrl+C', 'copy', getStr('dupBoxDetail'),
                       enabled=False)
  
 
@@ -389,6 +389,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.singleClassMode.setCheckable(True)
         self.singleClassMode.setChecked(settings.get(SETTING_SINGLE_CLASS, False))
         self.lastLabel = None
+		
         # Add option to enable/disable labels being displayed at the top of bounding boxes
         self.displayLabelOption = QAction(getStr('displayLabel'), self)
         self.displayLabelOption.setShortcut("Ctrl+Shift+P")
@@ -698,6 +699,7 @@ class MainWindow(QMainWindow, WindowMixin):
         menu.clear()
         files = [f for f in self.recentFiles if f !=
                  currFilePath and exists(f)]
+				 
         for i, f in enumerate(files):
             icon = newIcon('labels')
             action = QAction(
@@ -709,14 +711,18 @@ class MainWindow(QMainWindow, WindowMixin):
         self.menus.labelList.exec_(self.labelList.mapToGlobal(point))
 
     def editLabel(self):
+
         try:
             if not self.canvas.editing():
                 return
             item = self.currentItem()
             if not item:
                 return
-            text = self.labelDialog.popUp(item.text())
+            text = self.labelDialog.popUp(item.text(),shape=self.canvas.selectedShape)
+
+			
             if text is not None:
+                self.lastLabel=text
                 item.setText(text)
                 item.setBackground(generateColorByText(text))
                 self.setDirty()
@@ -784,7 +790,8 @@ class MainWindow(QMainWindow, WindowMixin):
                                    u"<p>在操作标签时发生错误.")
                                   % (e))  
 
-    def addLabel(self, shape):
+    def addLabel(self, shape,isAdded=False):
+
         shape.paintLabel = self.displayLabelOption.isChecked()
         item = HashableQListWidgetItem(shape.label)
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
@@ -796,6 +803,12 @@ class MainWindow(QMainWindow, WindowMixin):
         for action in self.actions.onShapesPresent:
             action.setEnabled(True)
         self.updateComboBox()
+		
+        if isAdded is True:
+            self.canvas.selectedShape=shape;
+            self.shapeSelectionChanged(True);
+            self.canvas.selectShape(shape)
+
 
     def remLabel(self, shape):
         if shape is None:
@@ -834,7 +847,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 else:
                     shape.fill_color = generateColorByText(label)
 
-                self.addLabel(shape)
+                self.addLabel(shape,False)
             self.updateComboBox()
             self.canvas.loadShapes(s)
         except BaseException as e:  
@@ -902,7 +915,7 @@ class MainWindow(QMainWindow, WindowMixin):
                                   % (e))  
 
     def copySelectedShape(self):
-        self.addLabel(self.canvas.copySelectedShape())
+        self.addLabel(self.canvas.copySelectedShape(),False)
         # fix copy and delete
         self.shapeSelectionChanged(True)
 
@@ -951,7 +964,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 if self.singleClassMode.isChecked() and self.lastLabel:
                     text = self.lastLabel
                 else:
-                    text = self.labelDialog.popUp(text=self.prevLabelText)
+                    text = self.labelDialog.popUp(text=self.prevLabelText,shape=self.canvas.selectedShape)
                     self.lastLabel = text
             else:
                 text = self.defaultLabelTextLine.text()
@@ -962,7 +975,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.prevLabelText = text
                 generate_color = generateColorByText(text)
                 shape = self.canvas.setLastLabel(text, generate_color, generate_color)
-                self.addLabel(shape)
+                self.addLabel(shape,True)
                 if self.beginner():  # Switch to edit mode.
                     self.canvas.setEditing(True)
                     self.actions.create.setEnabled(True)
@@ -975,27 +988,31 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 # self.canvas.undoLastLine()
                 self.canvas.resetAllLines()
+
         except BaseException as e:
             self.errorMessage(u'发生错误',
                                     (u"<p><b>%s</b></p>")
                                       % (e))               
+							
 
     def scrollRequest(self, delta, orientation):
         try:
             units = - delta / (8 * 15)
             bar = self.scrollBars[orientation]
-            bar.setValue(bar.value() + bar.singleStep() * units)
+            bar.setValue(int(bar.value() + bar.singleStep() * units))
         except BaseException as e:
-            self.errorMessage(u'发生错误',
-                                      (u"<p><b>%s</b></p>")
-                                      % (e))               
+            print(e)
+
+            #self.errorMessage(u'发生错误',
+            #                         (u"<p><b>%s</b></p>")
+            #                          % (e))               
 
     def setZoom(self, value):
         try:
             self.actions.fitWidth.setChecked(False)
             self.actions.fitWindow.setChecked(False)
             self.zoomMode = self.MANUAL_ZOOM
-            self.zoomWidget.setValue(value)
+            self.zoomWidget.setValue(int(value))
         except BaseException as e:
             self.errorMessage(u'发生错误',
                                       (u"<p><b>%s</b></p>")
@@ -1035,7 +1052,7 @@ class MainWindow(QMainWindow, WindowMixin):
         margin = 0.156#0.1
         move_x = (cursor_x - margin * w) / (w - 2 * margin * w)
         move_y = (cursor_y - margin * h) / (h - 2 * margin * h)
-
+        
         # clamp the values from 0 to 1
         move_x = min(max(move_x, 0), 1)
         move_y = min(max(move_y, 0), 1)
@@ -1051,8 +1068,8 @@ class MainWindow(QMainWindow, WindowMixin):
         d_v_bar_max = v_bar.maximum() - v_bar_max
 
         # get the new scrollbar values
-        new_h_bar_value = h_bar.value() + move_x * d_h_bar_max
-        new_v_bar_value = v_bar.value() + move_y * d_v_bar_max
+        new_h_bar_value = int(h_bar.value() + move_x * d_h_bar_max)
+        new_v_bar_value = int(v_bar.value() + move_y * d_v_bar_max)
 
         h_bar.setValue(new_h_bar_value)
         v_bar.setValue(new_v_bar_value)
@@ -1386,9 +1403,10 @@ class MainWindow(QMainWindow, WindowMixin):
             currIndex = self.mImgList.index(self.filePath)
             if currIndex - 1 >= 0:
                 filename = self.mImgList[currIndex - 1]
-                if filename:
+                if filename and os.path.exists(filename):
                     self.loadFile(filename)
-                    
+
+					
         except BaseException as e:
             self.errorMessage(u'发生错误',
                                       (u"<p><b>%s</b></p>"
@@ -1421,10 +1439,11 @@ class MainWindow(QMainWindow, WindowMixin):
                 currIndex = self.mImgList.index(self.filePath)
                 if currIndex + 1 < len(self.mImgList):
                     filename = self.mImgList[currIndex + 1]
-
-            if filename:
+					
+            if filename and os.path.exists(filename):
                 self.loadFile(filename)
-            
+
+				
         except BaseException as e:
             self.errorMessage(u'发生错误',
                                       (u"<p><b>%s</b></p>"
@@ -1501,7 +1520,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.openNextImg()
             if os.path.exists(deletePath):
                 os.remove(deletePath)
-            self.importDirImages(self.lastOpenDir)
+            #self.importDirImages(self.lastOpenDir)
 
     def resetAll(self):
         self.settings.reset()
